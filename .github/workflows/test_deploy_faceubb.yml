@@ -50,7 +50,7 @@ jobs:
           password: ${{ secrets.OPENVPN_PASSWORD }}
 
       - name: Conexion SSH y Despliegue # Conecta por SSH al servidor y despliega el proyecto
-        uses: appleboy/ssh-action@v1.2.2
+        uses: appleboy/ssh-action@v1
         timeout-minutes: 3 # Tiempo máximo de espera para conectarse al servidor
         with: # Conexión SSH al servidor
           host: ${{ secrets.PROD_HOST }}
