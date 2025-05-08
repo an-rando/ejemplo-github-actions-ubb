@@ -43,7 +43,7 @@ jobs:
 
       - name: Conexion a la VPN de la UBB # Conecta a la VPN de la UBB
         run: |
-          sudo openvpn --config face-ubb.ovpn --auth-user-pass <(echo -e "${{ secrets.OPENVPN_USERNAME }}\n${{ secrets.OPENVPN_PASSWORD }}") --daemon
+          sudo openvpn --config face-ubb.ovpn --auth-user-pass <(echo -e "${{ secrets.OPENVPN_USERNAME }}\n${{ secrets.OPENVPN_PASSWORD }}") --daemon --verb 3 --log /dev/stdout
           sleep 15 # Espera a que la VPN se conecte
           if ! pgrep -x openvpn > /dev/null; then
             echo "OpenVPN failed to start. Exiting..."
