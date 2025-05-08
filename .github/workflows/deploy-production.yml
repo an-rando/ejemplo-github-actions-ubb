@@ -1,0 +1,56 @@
+name: Despliegue a produccion
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Instalar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Instalar dependencias
+        run: npm install
+
+      - name: Ejecutar pruebas
+        run: npm test
+
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Instalar OpenVPN
+        run: |
+          sudo apt update -qq > /dev/null 2>&1
+          sudo apt install -y -qq openvpn openvpn-systemd-resolved > /dev/null 2>&1
+
+      - name: Crear archivo de configuración OpenVPN
+        run: echo "${{ secrets.OPENVPN_CONFIG }}" > face-ubb.ovpn
+
+      - name: Conexion a la VPN de la UBB
+        uses: kota65535/github-openvpn-connect-action@v3.0.0
+        with:
+          config_file: face-ubb.ovpn
+          username: ${{ secrets.OPENVPN_USERNAME }}
+          password: ${{ secrets.OPENVPN_PASSWORD }}
+
+      - name: Conexion SSH y Despliegue
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          port: ${{ secrets.PROD_PORT }}
+          username: ${{ secrets.PROD_USER }}
+          password: ${{ secrets.PROD_PASSWORD }}
+          script: |
+            cd cicd/EICRV
+            git fetch origin main
+            git reset --hard origin/main
+            npm install
+            pm2 restart eicrv

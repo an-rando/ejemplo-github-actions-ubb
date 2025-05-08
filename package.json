@@ -1,0 +1,19 @@
+{
+  "name": "@an-rando/web-app-ci",
+  "version": "1.0.0",
+  "description": "Una aplicación sencilla en Node.js que renderiza una página web con un mensaje de prueba.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "jest"
+  },
+  "dependencies": {
+    "express": "^4.17.1"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "supertest": "^7.1.0"
+  }
+}
