@@ -10,7 +10,7 @@
   "dependencies": {
     "express": "^4.17.1"
   },
-  "author": "",
+  "author": "an-rando",
   "license": "ISC",
   "devDependencies": {
     "jest": "^29.7.0",
