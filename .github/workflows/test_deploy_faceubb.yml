@@ -30,6 +30,7 @@ jobs:
   # https://docs.github.com/es/actions/security-guides/encrypted-secrets
 
   deploy: # Job para desplegar el proyecto
+    needs: tests # Este job depende del job de pruebas, por lo que no se ejecutará si el job de pruebas falla
     runs-on: ubuntu-latest
     steps:
       - name: Instalar OpenVPN # Instala OpenVPN en el entorno virtual
