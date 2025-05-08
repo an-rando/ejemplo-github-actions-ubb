@@ -43,6 +43,7 @@ jobs:
 
       - name: Conexion a la VPN de la UBB # Conecta a la VPN de la UBB
         uses: kota65535/github-openvpn-connect-action@v3.0.0 # Usa una acción de GitHub creada por un usuario
+        timeout-minutes: 3 # Tiempo máximo de espera para conectarse a la VPN
         with:
           config_file: face-ubb.ovpn # Nombre del archivo de configuración previamente creado
           username: ${{ secrets.OPENVPN_USERNAME }}
@@ -50,13 +51,14 @@ jobs:
 
       - name: Conexion SSH y Despliegue # Conecta por SSH al servidor y despliega el proyecto
         uses: appleboy/ssh-action@v1.2.2
+        timeout-minutes: 3 # Tiempo máximo de espera para conectarse al servidor
         with: # Conexión SSH al servidor
           host: ${{ secrets.PROD_HOST }}
           port: ${{ secrets.PROD_PORT }}
           username: ${{ secrets.PROD_USER }}
           password: ${{ secrets.PROD_PASSWORD }}
-          # Ejecuta el script de despliegue en el servidor. Se asume que el servidor fue iniciado al menos una vez.
-          script: |
+          script:
+            | # Ejecuta el script de despliegue en el servidor. Se asume que el servidor fue iniciado al menos una vez.
             cd cicd/EICRV
             git fetch origin main
             git reset --hard origin/main
