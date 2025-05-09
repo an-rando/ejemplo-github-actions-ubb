@@ -39,16 +39,25 @@ jobs:
           sudo apt install -y -qq openvpn openvpn-systemd-resolved openssh-client sshpass > /dev/null 2>&1
 
       - name: Crear archivo de configuración OpenVPN # Crea el archivo de configuración OpenVPN en memoria
-        run: echo "${{ secrets.OPENVPN_CONFIG }}" > /dev/shm/face-ubb.ovpn
+        run: |
+          echo "${{ secrets.OPENVPN_CONFIG }}" > /dev/shm/face-ubb.ovpn
+          echo -e "${{ secrets.OPENVPN_USERNAME }}\n${{ secrets.OPENVPN_PASSWORD }}" > /dev/shm/openvpn_auth.txt
 
       - name: Conexion a la VPN de la UBB # Conecta a la VPN de la UBB
         timeout-minutes: 2 # Establece un timeout de 2 minutos para la conexión
         run: |
-          sudo openvpn --config /dev/shm/face-ubb.ovpn --auth-user-pass <(echo -e "${{ secrets.OPENVPN_USERNAME }}\n${{ secrets.OPENVPN_PASSWORD }}") --daemon --log /dev/stdout
+          sudo openvpn \
+            --config /dev/shm/face-ubb.ovpn \
+            --auth-user-pass /dev/shm/openvpn_auth.txt \
+            --verb 4 \
+            --log /dev/stdout \
+            &
           sleep 10 # Espera 10 segundos para que la conexión se establezca
 
       - name: Eliminar archivo de configuración OpenVPN # Limpia el archivo de configuración
-        run: rm -f /dev/shm/face-ubb.ovpn
+        run: |
+          rm -f /dev/shm/face-ubb.ovpn
+          rm -f /dev/shm/openvpn_auth.txt
 
       - name: Conexión SSH y Despliegue
         timeout-minutes: 1
