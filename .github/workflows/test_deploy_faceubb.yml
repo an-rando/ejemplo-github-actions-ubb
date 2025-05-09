@@ -54,7 +54,7 @@ jobs:
         run: rm -f /dev/shm/face-ubb.ovpn
 
       - name: Conexion SSH y Despliegue # Conecta por SSH al servidor y despliega el proyecto
-        uses: appleboy/ssh-action@v0.1.10
+        uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.PROD_HOST }}
           port: ${{ secrets.PROD_PORT }}
