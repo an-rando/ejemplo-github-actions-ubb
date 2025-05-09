@@ -41,26 +41,40 @@ jobs:
       - name: Crear archivo de configuración OpenVPN # Crea el archivo de configuración OpenVPN en memoria
         run: |
           echo "${{ secrets.OPENVPN_CONFIG }}" > /dev/shm/face-ubb.ovpn
-          echo -e "${{ secrets.OPENVPN_USERNAME }}\n${{ secrets.OPENVPN_PASSWORD }}" > /dev/shm/openvpn_auth.txt
+          cat > /dev/shm/up.txt <<EOF
+          ${{ secrets.OPENVPN_USERNAME }}
+          ${{ secrets.OPENVPN_PASSWORD }}
+          EOF
+          chmod 600 /dev/shm/up.txt
+          echo 'auth-user-pass /dev/shm/up.txt' >> /dev/shm/face-ubb.ovpn
 
       - name: Conexion a la VPN de la UBB # Conecta a la VPN de la UBB
-        timeout-minutes: 2 # Establece un timeout de 2 minutos para la conexión
         run: |
           sudo openvpn \
             --config /dev/shm/face-ubb.ovpn \
-            --auth-user-pass /dev/shm/openvpn_auth.txt \
-            --verb 4 \
-            --log /dev/stdout \
-            &
-          sleep 10 # Espera 10 segundos para que la conexión se establezca
+            --daemon \
+            --log openvpn.log \
+            --writepid openvpn.pid
+
+      - name: Esperar a que la VPN se conecte
+        run: |
+          # timeout 15s ó falla la acción
+          timeout 15s bash -c \
+            'until grep -q "Initialization Sequence Completed" openvpn.log; do sleep 1; done'
+
+          VPN_PID=$(cat openvpn.pid)
+          echo "🚀 VPN conectada. PID=$VPN_PID"
+          # opcional: exportar como output
+          echo "vpn_pid=$VPN_PID" >> $GITHUB_OUTPUT
 
       - name: Eliminar archivo de configuración OpenVPN # Limpia el archivo de configuración
+        if: always()
         run: |
           rm -f /dev/shm/face-ubb.ovpn
-          rm -f /dev/shm/openvpn_auth.txt
+          rm -f /dev/shm/up.txt openvpn.log openvpn.pid
 
       - name: Conexión SSH y Despliegue
-        timeout-minutes: 1
+        timeout-minutes: 2
         run: |
           sshpass -p "${{ secrets.PROD_PASSWORD }}" ssh \
             -o StrictHostKeyChecking=no \
