@@ -23,10 +23,10 @@ jobs:
       - name: Ejecutar pruebas # Ejecuta las pruebas del proyecto
         run: npm test
 
-  # Cuidado: Las conecciones SSH y OpenVPN pueden ser peligrosas si no se protejen correctamente.
-  # Asegúrate que todas las credenciales estan protegidas con el uso de secretos de repositorio.
-  # EN NINGUN CASO SE DEBEN DEJAR CREDENCIALES EXPUESTAS EN ESTE ARCHIVO NI EN NINGUN OTRO.
-  # Si no sabes como proteger tus credenciales, consulta la documentacion de GitHub o pregunta a un profesor.
+  # CUIDADO: Las conexiones SSH y OpenVPN pueden ser peligrosas si no se protegen correctamente.
+  # Asegúrate de que todas las credenciales estén protegidas usando los secretos del repositorio.
+  # EN NINGÚN CASO SE DEBEN DEJAR CREDENCIALES EXPUESTAS EN ESTE ARCHIVO NI EN NINGÚN OTRO.
+  # Si no sabes cómo proteger tus credenciales, consulta la documentación de GitHub o pregunta a un profesor.
   # https://docs.github.com/es/actions/security-guides/encrypted-secrets
 
   deploy: # Job para desplegar el proyecto
@@ -38,10 +38,14 @@ jobs:
           sudo apt update -qq > /dev/null 2>&1
           sudo apt install -y -qq openvpn openvpn-systemd-resolved openssh-client sshpass
 
-      - name: Crear archivo de configuración OpenVPN # Crea el archivo de configuración OpenVPN en memoria
+      - name: Crear archivo de configuración OpenVPN # Crea el archivo de configuración de OpenVPN en memoria
         run: echo "${{ secrets.OPENVPN_CONFIG }}" > /dev/shm/face-ubb.ovpn
 
-      - name: Conexion a la VPN de la UBB # Conecta a la VPN de la UBB
+        # Conecta a la VPN de la UBB usando un action de GitHub del usuario kota65535.
+        # Tambien se podría usar el cliente de OpenVPN directamente.
+        # La ventaja de usar el action es que se encarga de crear el cliente y manejar la conexión por nosotros.
+        # Más información en https://github.com/kota65535/github-openvpn-connect-action/tree/v3.1.0/
+      - name: Conexion a la VPN de la UBB
         uses: kota65535/github-openvpn-connect-action@v3.1.0
         timeout-minutes: 2
         continue-on-error: false
@@ -50,18 +54,30 @@ jobs:
           username: ${{ secrets.OPENVPN_USERNAME }}
           password: ${{ secrets.OPENVPN_PASSWORD }}
 
-      - name: Eliminar archivo de configuración OpenVPN # Limpia el archivo de configuración
+      - name: Eliminar archivo de configuración OpenVPN # Limpia el archivo de configuración de OpenVPN
+        if: always()
         run: rm -f /dev/shm/face-ubb.ovpn
 
+      # La siguiente sección es para conectarse al servidor y desplegar el código
+      # Este ejemplo usa sshpass para conectarse al servidor usando SSH.
+      # Es recomendable usar claves SSH en lugar de contraseñas para mayor seguridad, evitando el uso de contraseñas.
+      # Hay muchas formas de hacer esto, este es solo un ejemplo sencillo con Node. Debe ser adaptado a tu proyecto.
+
       - name: Conexión SSH y Despliegue
+        timeout-minutes: 3
+        # 1. Conexión SSH al servidor
+        # 2. Ir al directorio del proyecto
+        # 3. Actualizar el código fuente desde el repositorio remoto
+        # 4. Instalar dependencias del proyecto
+        # 5. Verificar el estado de pm2 y reiniciar el servicio si es necesario
+        # 6. Reiniciar el servicio de pm2
         run: |
           sshpass -p "${{ secrets.PROD_PASSWORD }}" ssh \
             -q \
             -o StrictHostKeyChecking=no \
-            -o PrintBanner=no \
             -p ${{ secrets.PROD_PORT }} \
             ${{ secrets.PROD_USER }}@${{ secrets.PROD_HOST }} << 'EOF'
-              set -e
+              set -euo pipefail
               cd cicd/EICRV
               echo "Actualizando código fuente..."
               git fetch origin main
