@@ -32,30 +32,31 @@ jobs:
   deploy: # Job para desplegar el proyecto
     needs: tests # Este job depende del job de pruebas, por lo que no se ejecutará si el job de pruebas falla
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Instalar OpenVPN # Instala OpenVPN en el entorno virtual
         run: |
           sudo apt update -qq > /dev/null 2>&1
           sudo apt install -y -qq openvpn openvpn-systemd-resolved > /dev/null 2>&1
 
-      - name: Crear archivo de configuración OpenVPN # Crea el archivo de configuración OpenVPN
-        run: echo "${{ secrets.OPENVPN_CONFIG }}" > face-ubb.ovpn
+      - name: Crear archivo de configuración OpenVPN # Crea el archivo de configuración OpenVPN en memoria
+        run: echo "${{ secrets.OPENVPN_CONFIG }}" > /dev/shm/face-ubb.ovpn
 
       - name: Conexion a la VPN de la UBB # Conecta a la VPN de la UBB
-        run: |
-          echo -e "${{ secrets.OPENVPN_USERNAME }}\n${{ secrets.OPENVPN_PASSWORD }}" > vpn_credentials.txt
-          sudo openvpn --config face-ubb.ovpn --auth-user-pass vpn_credentials.txt --daemon --verb 3 --log /dev/stdout
-          sleep 15 # Espera a que la VPN se conecte
-          if ! pgrep -x openvpn > /dev/null; then
-            echo "OpenVPN failed to start. Exiting..."
-            rm -f vpn_credentials.txt
-            exit 1
-          fi
-          rm -f vpn_credentials.txt
+        uses: kota65535/github-openvpn-connect-action@v3.1.0
+        timeout-minutes: 2
+        continue-on-error: false
+        with:
+          config_file: /dev/shm/face-ubb.ovpn
+          username: ${{ secrets.OPENVPN_USERNAME }}
+          password: ${{ secrets.OPENVPN_PASSWORD }}
+
+      - name: Eliminar archivo de configuración OpenVPN # Limpia el archivo de configuración
+        run: rm -f /dev/shm/face-ubb.ovpn
 
       - name: Conexion SSH y Despliegue # Conecta por SSH al servidor y despliega el proyecto
         uses: appleboy/ssh-action@v1
-        timeout-minutes: 3 # Tiempo máximo de espera para conectarse al servidor
+        timeout-minutes: 2 # Tiempo máximo de espera para conectarse al servidor
         with: # Conexión SSH al servidor
           host: ${{ secrets.PROD_HOST }}
           port: ${{ secrets.PROD_PORT }}
