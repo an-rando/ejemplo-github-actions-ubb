@@ -42,18 +42,16 @@ jobs:
         run: echo "${{ secrets.OPENVPN_CONFIG }}" > /dev/shm/face-ubb.ovpn
 
       - name: Conexion a la VPN de la UBB # Conecta a la VPN de la UBB
-        uses: kota65535/github-openvpn-connect-action@v3.1.0
-        timeout-minutes: 2
-        continue-on-error: false
-        with:
-          config_file: /dev/shm/face-ubb.ovpn
-          username: ${{ secrets.OPENVPN_USERNAME }}
-          password: ${{ secrets.OPENVPN_PASSWORD }}
+        timeout-minutes: 2 # Establece un timeout de 2 minutos para la conexión
+        run: |
+          sudo openvpn --config /dev/shm/face-ubb.ovpn --auth-user-pass <(echo -e "${{ secrets.OPENVPN_USERNAME }}\n${{ secrets.OPENVPN_PASSWORD }}") --daemon --log /dev/stdout
+          sleep 10 # Espera 10 segundos para que la conexión se establezca
 
       - name: Eliminar archivo de configuración OpenVPN # Limpia el archivo de configuración
         run: rm -f /dev/shm/face-ubb.ovpn
 
       - name: Conexión SSH y Despliegue
+        timeout-minutes: 1
         run: |
           sshpass -p "${{ secrets.PROD_PASSWORD }}" ssh \
             -o StrictHostKeyChecking=no \
