@@ -58,6 +58,8 @@ jobs:
           sshpass -p "${{ secrets.PROD_PASSWORD }}" ssh \
             -q \
             -o StrictHostKeyChecking=no \
+            -o PrintMotd=no \
+            -o PrintBanner=no \
             -p ${{ secrets.PROD_PORT }} \
             ${{ secrets.PROD_USER }}@${{ secrets.PROD_HOST }} << 'EOF'
               set -e
