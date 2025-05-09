@@ -33,10 +33,10 @@ jobs:
     needs: tests # Este job depende del job de pruebas, por lo que no se ejecutará si el job de pruebas falla
     runs-on: ubuntu-latest
     steps:
-      - name: Instalar OpenVPN # Instala OpenVPN en el entorno virtual
+      - name: Instalar dependencias (OpenVPN, SSH y sshpass)
         run: |
           sudo apt update -qq > /dev/null 2>&1
-          sudo apt install -y -qq openvpn openvpn-systemd-resolved > /dev/null 2>&1
+          sudo apt install -y -qq openvpn openvpn-systemd-resolved openssh-client sshpass > /dev/null 2>&1
 
       - name: Crear archivo de configuración OpenVPN # Crea el archivo de configuración OpenVPN en memoria
         run: echo "${{ secrets.OPENVPN_CONFIG }}" > /dev/shm/face-ubb.ovpn
@@ -52,11 +52,6 @@ jobs:
 
       - name: Eliminar archivo de configuración OpenVPN # Limpia el archivo de configuración
         run: rm -f /dev/shm/face-ubb.ovpn
-
-      - name: Instalar SSH client y sshpass
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq openssh-client sshpass
 
       - name: Conexión SSH y Despliegue
         run: |
