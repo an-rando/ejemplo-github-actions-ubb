@@ -36,53 +36,39 @@ jobs:
       - name: Instalar dependencias (OpenVPN, SSH y sshpass)
         run: |
           sudo apt update -qq > /dev/null 2>&1
-          sudo apt install -y -qq openvpn openvpn-systemd-resolved openssh-client sshpass > /dev/null 2>&1
+          sudo apt install -y -qq openvpn openvpn-systemd-resolved openssh-client sshpass
 
       - name: Crear archivo de configuración OpenVPN # Crea el archivo de configuración OpenVPN en memoria
-        run: |
-          echo "${{ secrets.OPENVPN_CONFIG }}" > /dev/shm/face-ubb.ovpn
-          cat > /dev/shm/up.txt <<EOF
-          ${{ secrets.OPENVPN_USERNAME }}
-          ${{ secrets.OPENVPN_PASSWORD }}
-          EOF
-          chmod 600 /dev/shm/up.txt
-          echo 'auth-user-pass /dev/shm/up.txt' >> /dev/shm/face-ubb.ovpn
+        run: echo "${{ secrets.OPENVPN_CONFIG }}" > /dev/shm/face-ubb.ovpn
 
       - name: Conexion a la VPN de la UBB # Conecta a la VPN de la UBB
-        run: |
-          sudo openvpn \
-            --config /dev/shm/face-ubb.ovpn \
-            --daemon \
-            --log openvpn.log \
-            --writepid openvpn.pid
-
-      - name: Esperar a que la VPN se conecte
-        run: |
-          # timeout 15s ó falla la acción
-          timeout 15s bash -c \
-            'until grep -q "Initialization Sequence Completed" openvpn.log; do sleep 1; done'
-
-          VPN_PID=$(cat openvpn.pid)
-          echo "🚀 VPN conectada. PID=$VPN_PID"
-          # opcional: exportar como output
-          echo "vpn_pid=$VPN_PID" >> $GITHUB_OUTPUT
+        uses: kota65535/github-openvpn-connect-action@v3.1.0
+        timeout-minutes: 2
+        continue-on-error: false
+        with:
+          config_file: /dev/shm/face-ubb.ovpn
+          username: ${{ secrets.OPENVPN_USERNAME }}
+          password: ${{ secrets.OPENVPN_PASSWORD }}
 
       - name: Eliminar archivo de configuración OpenVPN # Limpia el archivo de configuración
-        if: always()
-        run: |
-          rm -f /dev/shm/face-ubb.ovpn
-          rm -f /dev/shm/up.txt openvpn.log openvpn.pid
+        run: rm -f /dev/shm/face-ubb.ovpn
 
       - name: Conexión SSH y Despliegue
-        timeout-minutes: 2
         run: |
           sshpass -p "${{ secrets.PROD_PASSWORD }}" ssh \
+            -q \
             -o StrictHostKeyChecking=no \
             -p ${{ secrets.PROD_PORT }} \
             ${{ secrets.PROD_USER }}@${{ secrets.PROD_HOST }} << 'EOF'
+              set -e
               cd cicd/EICRV
+              echo "Actualizando código fuente..."
               git fetch origin main
               git reset --hard origin/main
-              npm install
+              echo "Instalando dependencias..."
+              npm ci
+              echo "Verificando estado de pm2..."
+              pm2 status || (echo "pm2 no está corriendo, iniciando pm2..." && pm2 start eicrv)
+              echo "Reiniciando servicios..."
               pm2 restart eicrv
           EOF
