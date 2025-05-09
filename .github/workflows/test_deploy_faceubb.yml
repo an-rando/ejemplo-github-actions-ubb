@@ -29,43 +29,33 @@ jobs:
   # Si no sabes como proteger tus credenciales, consulta la documentacion de GitHub o pregunta a un profesor.
   # https://docs.github.com/es/actions/security-guides/encrypted-secrets
 
-  deploy: # Job para desplegar el proyecto
-    needs: tests # Este job depende del job de pruebas, por lo que no se ejecutará si el job de pruebas falla
+  deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
     steps:
-      - name: Crear archivo de configuración OpenVPN # Crea el archivo de configuración OpenVPN en memoria
-        run: echo "${{ secrets.OPENVPN_CONFIG }}" > /dev/shm/face-ubb.ovpn
-      - name: Install OpenVPN
+      - name: Instalar OpenVPN
         run: |
-          sudo apt update
-          sudo apt install -y openvpn openvpn-systemd-resolved
-      - name: Connect to VPN
-        uses: "kota65535/github-openvpn-connect-action@v2"
+          sudo apt update -qq > /dev/null 2>&1
+          sudo apt install -y -qq openvpn openvpn-systemd-resolved > /dev/null 2>&1
+
+      - name: Crear archivo de configuración OpenVPN
+        run: echo "${{ secrets.OPENVPN_CONFIG }}" > face-ubb.ovpn
+
+      - name: Conexion a la VPN de la UBB
+        uses: kota65535/github-openvpn-connect-action@v3.0.0
         with:
-          config_file: /dev/shm/face-ubb.ovpn
+          config_file: face-ubb.ovpn
           username: ${{ secrets.OPENVPN_USERNAME }}
           password: ${{ secrets.OPENVPN_PASSWORD }}
 
-      - name: Verificar interfaz tun0
-        run: ip a show tun0
-
-      - name: Comprobar acceso a página interna
-        run: |
-          curl http://146.83.194.188:5020/
-
-      - name: Conexion SSH y Despliegue # Conecta por SSH al servidor y despliega el proyecto
-        uses: appleboy/ssh-action@v1
-        timeout-minutes: 2 # Tiempo máximo de espera para conectarse al servidor
-        with: # Conexión SSH al servidor
+      - name: Conexion SSH y Despliegue
+        uses: appleboy/ssh-action@v0.1.10
+        with:
           host: ${{ secrets.PROD_HOST }}
           port: ${{ secrets.PROD_PORT }}
           username: ${{ secrets.PROD_USER }}
           password: ${{ secrets.PROD_PASSWORD }}
-          script:
-            | # Ejecuta el script de despliegue en el servidor. Se asume que el servidor fue iniciado al menos una vez.
+          script: |
             cd cicd/EICRV
-            git fetch origin main
-            git reset --hard origin/main
+            git pull origin main
             npm install
             pm2 restart eicrv
