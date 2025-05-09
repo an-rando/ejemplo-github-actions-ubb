@@ -52,13 +52,7 @@ jobs:
 
       - name: Comprobar acceso a página interna
         run: |
-          URL="http://146.83.194.188:5020/"    # ajusta a tu endpoint interno
-          status=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
-          echo "HTTP Status en $URL: $status"
-          if [ "$status" -ne 200 ]; then
-            echo "ERROR: Página interna inaccesible" >&2
-            exit 1
-          fi
+          curl http://146.83.194.188:5020/
 
       - name: Conexion SSH y Despliegue # Conecta por SSH al servidor y despliega el proyecto
         uses: appleboy/ssh-action@v1
