@@ -29,18 +29,19 @@ jobs:
   # Si no sabes como proteger tus credenciales, consulta la documentacion de GitHub o pregunta a un profesor.
   # https://docs.github.com/es/actions/security-guides/encrypted-secrets
 
-  deploy:
+  deploy: # Job para desplegar el proyecto
+    needs: tests # Este job depende del job de pruebas, por lo que no se ejecutará si el job de pruebas falla
     runs-on: ubuntu-latest
     steps:
-      - name: Instalar OpenVPN
+      - name: Instalar OpenVPN # Instala OpenVPN en el entorno virtual
         run: |
           sudo apt update -qq > /dev/null 2>&1
           sudo apt install -y -qq openvpn openvpn-systemd-resolved > /dev/null 2>&1
 
-      - name: Crear archivo de configuración OpenVPN
+      - name: Crear archivo de configuración OpenVPN # Crea el archivo de configuración OpenVPN en memoria
         run: echo "${{ secrets.OPENVPN_CONFIG }}" > /dev/shm/face-ubb.ovpn
 
-      - name: Conexion a la VPN de la UBB
+      - name: Conexion a la VPN de la UBB # Conecta a la VPN de la UBB
         uses: kota65535/github-openvpn-connect-action@v3.0.0
         timeout-minutes: 2
         continue-on-error: false
@@ -49,13 +50,17 @@ jobs:
           username: ${{ secrets.OPENVPN_USERNAME }}
           password: ${{ secrets.OPENVPN_PASSWORD }}
 
-      - name: Conexion SSH y Despliegue
+      - name: Eliminar archivo de configuración OpenVPN # Limpia el archivo de configuración
+        run: rm -f /dev/shm/face-ubb.ovpn
+
+      - name: Conexion SSH y Despliegue # Conecta por SSH al servidor y despliega el proyecto
         uses: appleboy/ssh-action@v0.1.10
         with:
           host: ${{ secrets.PROD_HOST }}
           port: ${{ secrets.PROD_PORT }}
           username: ${{ secrets.PROD_USER }}
           password: ${{ secrets.PROD_PASSWORD }}
+          # Ejecuta el script de despliegue en el servidor. Se asume que el servidor fue iniciado al menos una vez.
           script: |
             cd cicd/EICRV
             git pull origin main
