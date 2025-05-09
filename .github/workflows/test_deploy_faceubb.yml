@@ -39,19 +39,24 @@ jobs:
           sudo apt install -y -qq openvpn openvpn-systemd-resolved openssh-client sshpass > /dev/null 2>&1
 
       - name: Crear archivo de configuración OpenVPN # Crea el archivo de configuración OpenVPN en memoria
-        run: echo "${{ secrets.OPENVPN_CONFIG }}" > /dev/shm/face-ubb.ovpn
+        run: |
+          echo "${{ secrets.OPENVPN_CONFIG }}" > /dev/shm/face-ubb.ovpn
+          echo -e "${{ secrets.OPENVPN_USERNAME }}\n${{ secrets.OPENVPN_PASSWORD }}" > /dev/shm/openvpn-auth.txt
 
-      - name: Conexion a la VPN de la UBB # Conecta a la VPN de la UBB
-        uses: kota65535/github-openvpn-connect-action@v3.0.0
-        timeout-minutes: 2
-        continue-on-error: false
-        with:
-          config_file: /dev/shm/face-ubb.ovpn
-          username: ${{ secrets.OPENVPN_USERNAME }}
-          password: ${{ secrets.OPENVPN_PASSWORD }}
+      - name: Conexión VPN UBB sin usar action
+        run: |
+          # Lanzar OpenVPN en background
+          sudo openvpn \
+            --config /dev/shm/face-ubb.ovpn \
+            --auth-user-pass /dev/shm/openvpn-auth.txt \
+            --daemon
+          # Esperar a que la VPN se establezca
+          sleep 10
 
-      - name: Eliminar archivo de configuración OpenVPN # Limpia el archivo de configuración
-        run: rm -f /dev/shm/face-ubb.ovpn
+      - name: Eliminar archivo de configuración OpenVPN y credenciales
+        run: |
+          rm -f /dev/shm/openvpn-auth.txt
+          rm -f /dev/shm/face-ubb.ovpn
 
       - name: Conexión SSH y Despliegue
         run: |
