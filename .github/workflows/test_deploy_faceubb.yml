@@ -34,25 +34,21 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Instalar OpenVPN # Instala OpenVPN en el entorno virtual
-        run: |
-          sudo apt update -qq > /dev/null 2>&1
-          sudo apt install -y -qq openvpn openvpn-systemd-resolved > /dev/null 2>&1
-
       - name: Crear archivo de configuración OpenVPN # Crea el archivo de configuración OpenVPN en memoria
         run: echo "${{ secrets.OPENVPN_CONFIG }}" > /dev/shm/face-ubb.ovpn
-
-      - name: Conexion a la VPN de la UBB # Conecta a la VPN de la UBB
-        uses: kota65535/github-openvpn-connect-action@v3.1.0
-        timeout-minutes: 2
-        continue-on-error: false
+      - name: Install OpenVPN
+        run: |
+          sudo apt update
+          sudo apt install -y openvpn openvpn-systemd-resolved
+      - name: Connect to VPN
+        uses: "kota65535/github-openvpn-connect-action@v2"
         with:
           config_file: /dev/shm/face-ubb.ovpn
           username: ${{ secrets.OPENVPN_USERNAME }}
           password: ${{ secrets.OPENVPN_PASSWORD }}
 
-      - name: Eliminar archivo de configuración OpenVPN # Limpia el archivo de configuración
-        run: rm -f /dev/shm/face-ubb.ovpn
+      - name: Verificar interfaz tun0
+        run: ip a show tun0
 
       - name: Conexion SSH y Despliegue # Conecta por SSH al servidor y despliega el proyecto
         uses: appleboy/ssh-action@v1
