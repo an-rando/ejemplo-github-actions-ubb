@@ -53,16 +53,19 @@ jobs:
       - name: Eliminar archivo de configuración OpenVPN # Limpia el archivo de configuración
         run: rm -f /dev/shm/face-ubb.ovpn
 
-      - name: Conexion SSH y Despliegue # Conecta por SSH al servidor y despliega el proyecto
-        uses: appleboy/ssh-action@v1.2.1
-        with:
-          host: ${{ secrets.PROD_HOST }}
-          port: ${{ secrets.PROD_PORT }}
-          username: ${{ secrets.PROD_USER }}
-          password: ${{ secrets.PROD_PASSWORD }}
-          # Ejecuta el script de despliegue en el servidor. Se asume que el servidor fue iniciado al menos una vez.
-          script: |
-            cd cicd/EICRV
-            git pull origin main
-            npm install
-            pm2 restart eicrv
+      - name: Instalar SSH client y sshpass
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq openssh-client sshpass
+
+      - name: Conexión SSH y Despliegue
+        run: |
+          sshpass -p "${{ secrets.PROD_PASSWORD }}" ssh \
+            -o StrictHostKeyChecking=no \
+            -p ${{ secrets.PROD_PORT }} \
+            ${{ secrets.PROD_USER }}@${{ secrets.PROD_HOST }} << 'EOF'
+              cd cicd/EICRV
+              git pull origin main
+              npm install
+              pm2 restart eicrv
+            EOF
