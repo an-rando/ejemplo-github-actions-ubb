@@ -62,7 +62,11 @@ jobs:
       # Este ejemplo usa sshpass para conectarse al servidor usando SSH.
       # Es recomendable usar claves SSH en lugar de contraseñas para mayor seguridad, evitando el uso de contraseñas.
       # Hay muchas formas de hacer esto, este es solo un ejemplo sencillo con Node. Debe ser adaptado a tu proyecto.
-
+      
+      - name: Forzar DNS interno
+        run: |
+         echo "nameserver 10.0.9.1" | sudo tee /etc/resolv.conf
+         
       - name: Conexión SSH y Despliegue
         timeout-minutes: 3
         # 1. Conexión SSH al servidor
