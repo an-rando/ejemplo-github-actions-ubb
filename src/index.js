@@ -12,7 +12,7 @@ app.get("/", (req, res) => {
 
 if (require.main === module) {
   app.listen(PORT, () => {
-    console.log(`Servidor escuchando en http://localhost:${PORT}`);
+    console.log(`2 .Servidor escuchando en http://localhost:${PORT}`);
   });
 }
 
